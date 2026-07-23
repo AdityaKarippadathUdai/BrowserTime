@@ -1,0 +1,1 @@
+document.addEventListener("visibilitychange",()=>{if(typeof chrome<"u"&&chrome.runtime)try{chrome.runtime.sendMessage({type:"VISIBILITY_CHANGE",hidden:document.hidden,domain:window.location.hostname})}catch{}});
