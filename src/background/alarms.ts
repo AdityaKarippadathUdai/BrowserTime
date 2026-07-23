@@ -1,15 +1,22 @@
-export const FLUSH_ALARM = 'flush_active_time';
-export const CHECK_NOTIF_ALARM = 'check_distraction_limit';
+import { browserAPI } from '../utils/browserApi';
+
+export const FLUSH_ALARM = 'wtt_flush';
+export const CHECK_NOTIF_ALARM = 'wtt_check_notif';
 
 export function setupAlarms(): void {
-  if (typeof chrome !== 'undefined' && chrome.alarms) {
-    try {
-      // Periodic flush every 10 seconds to save state safely
-      chrome.alarms.create(FLUSH_ALARM, { periodInMinutes: 0.16 }); // ~10 seconds
-      // Check notification thresholds every 5 minutes
-      chrome.alarms.create(CHECK_NOTIF_ALARM, { periodInMinutes: 5 });
-    } catch (e) {
-      console.error('Alarms setup error:', e);
+  if (!browserAPI?.alarms) return;
+
+  // Flush active seconds every ~10 seconds
+  browserAPI.alarms.get(FLUSH_ALARM, (existing) => {
+    if (!existing) {
+      browserAPI.alarms.create(FLUSH_ALARM, { periodInMinutes: 1 / 6 }); // ~10s
     }
-  }
+  });
+
+  // Notification check every 5 minutes
+  browserAPI.alarms.get(CHECK_NOTIF_ALARM, (existing) => {
+    if (!existing) {
+      browserAPI.alarms.create(CHECK_NOTIF_ALARM, { periodInMinutes: 5 });
+    }
+  });
 }
