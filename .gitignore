@@ -1,1 +1,4 @@
 node_modules/
+website-time-tracker-firefox.xpi
+firefox-dist/
+chrome-dist
