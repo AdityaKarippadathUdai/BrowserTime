@@ -11,6 +11,7 @@ import { ActiveState, commitSeconds, loadActiveState, saveActiveState } from './
 
 let isWindowFocused = true;
 let isUserIdle = false;
+let initializedFromStorage = false;
 
 function isSupportedUrl(url: string): boolean {
   if (!url) return false;
@@ -122,7 +123,21 @@ async function processTab(tab: chrome.tabs.Tab | null): Promise<void> {
 }
 
 export async function syncActiveTab(): Promise<void> {
+  const active = await loadActiveState();
   const tab = await queryActiveTab();
+
+  if (!active && !tab) {
+    return;
+  }
+
+  if (!initializedFromStorage) {
+    initializedFromStorage = true;
+    if (active) {
+      await processTab(tab);
+      return;
+    }
+  }
+
   await processTab(tab);
 }
 
