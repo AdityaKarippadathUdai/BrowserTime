@@ -3,7 +3,8 @@ import { Clock, ExternalLink, Globe, ShieldCheck, Zap } from 'lucide-react';
 import { CATEGORIES } from '../constants/categories';
 import { StorageProvider, useStorage } from '../contexts/StorageContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
-import { getDomainCategory } from '../utils/categorization';
+import { browserAPI } from '../utils/browserApi';
+import { calculateProductivityScore, getDomainCategory } from '../utils/categorization';
 import { formatDuration, getFaviconUrl, getFormattedDate } from '../utils/formatters';
 import '../styles/index.css';
 
@@ -28,9 +29,9 @@ const PopupContent: React.FC = () => {
   // Query active background session timer every second
   useEffect(() => {
     const fetchCurrentSession = () => {
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
+      if (browserAPI && browserAPI.runtime) {
         try {
-          chrome.runtime.sendMessage({ type: 'GET_CURRENT_SESSION' }, (response) => {
+          browserAPI.runtime.sendMessage({ type: 'GET_CURRENT_SESSION' }, (response) => {
             if (response) {
               setCurrentSession(response);
             }
@@ -51,6 +52,7 @@ const PopupContent: React.FC = () => {
   const todayDomainMap = todayRecord.domains || {};
 
   const todayTotalTime = Object.values(todayDomainMap).reduce((a, b) => a + b, 0);
+  const todayProductivityScore = calculateProductivityScore(todayDomainMap, settings);
 
   // Top 5 websites today
   const top5Websites = Object.entries(todayDomainMap)
@@ -64,11 +66,17 @@ const PopupContent: React.FC = () => {
     .slice(0, 5);
 
   const handleOpenDashboard = () => {
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage({ type: 'OPEN_DASHBOARD' });
-    } else {
-      window.open('/dashboard.html', '_blank');
+    if (browserAPI?.runtime) {
+      browserAPI.runtime.sendMessage({ type: 'OPEN_DASHBOARD' }, () => {
+        if (browserAPI.runtime.lastError) {
+          const dashboardUrl = browserAPI.runtime.getURL('dashboard.html');
+          browserAPI.tabs.create({ url: dashboardUrl });
+        }
+      });
+      return;
     }
+
+    window.open('/dashboard.html', '_blank');
   };
 
   return (
@@ -90,6 +98,7 @@ const PopupContent: React.FC = () => {
           <button
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
             className="p-1.5 rounded-lg bg-slate-800/80 text-slate-400 hover:text-slate-200 transition-colors"
+            title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}
           >
             {isDark ? '☀️' : '🌙'}
           </button>
@@ -146,6 +155,11 @@ const PopupContent: React.FC = () => {
           <span className="text-base font-extrabold text-slate-100">
             {formatDuration(todayTotalTime)}
           </span>
+        </div>
+
+        <div className="flex items-center justify-between p-3 glass-panel">
+          <span className="text-xs font-semibold text-slate-400">Productivity Score</span>
+          <span className="text-base font-extrabold text-emerald-400">{todayProductivityScore}</span>
         </div>
 
         {/* Top 5 Visited Today */}
