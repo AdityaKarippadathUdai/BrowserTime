@@ -3,28 +3,35 @@ import { StorageState } from '../types';
 import { browserAPI } from './browserApi';
 
 const STORAGE_KEY = 'website_time_tracker_data';
+export const ACTIVE_STATE_KEY = 'wtt_active_state';
 
 const initial: StorageState = { domains: {}, daily: {}, settings: DEFAULT_SETTINGS };
 
 function readRaw(): Promise<StorageState> {
   return new Promise((resolve) => {
     if (browserAPI?.storage?.local) {
-      browserAPI.storage.local.get(STORAGE_KEY, (res) => {
+      browserAPI.storage.local.get([STORAGE_KEY, ACTIVE_STATE_KEY], (res) => {
         const raw = res?.[STORAGE_KEY] || {};
         resolve({
           domains: raw.domains || {},
           daily: raw.daily || {},
           settings: { ...DEFAULT_SETTINGS, ...(raw.settings || {}) },
-          activeState: raw.activeState,
+          activeState: res?.[ACTIVE_STATE_KEY] ?? raw.activeState ?? null,
         });
       });
     } else {
       // Dev fallback
       try {
         const item = localStorage.getItem(STORAGE_KEY);
+        const activeItem = localStorage.getItem(ACTIVE_STATE_KEY);
         if (item) {
           const p = JSON.parse(item);
-          resolve({ ...initial, ...p, settings: { ...DEFAULT_SETTINGS, ...(p.settings || {}) } });
+          resolve({
+            ...initial,
+            ...p,
+            settings: { ...DEFAULT_SETTINGS, ...(p.settings || {}) },
+            activeState: activeItem ? JSON.parse(activeItem) : p.activeState ?? null,
+          });
           return;
         }
       } catch { /* ignore */ }

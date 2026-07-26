@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS } from '../constants/categories';
-import { CategoryName, DailyRecord, DomainStats, ProductivityType, Settings, StorageState } from '../types';
+import { ActiveTrackerState, CategoryName, DailyRecord, DomainStats, ProductivityType, Settings, StorageState } from '../types';
 import { browserAPI } from '../utils/browserApi';
 import {
+  ACTIVE_STATE_KEY,
   exportDataJSON,
   getStorageData,
   importDataJSON,
@@ -14,6 +15,7 @@ interface StorageContextType {
   domains: { [domain: string]: DomainStats };
   daily: { [dateStr: string]: DailyRecord };
   settings: Settings;
+  activeState: ActiveTrackerState | null;
   isLoading: boolean;
   refreshData: () => Promise<void>;
   updateSettings: (newSettings: Partial<Settings>) => Promise<void>;
@@ -31,6 +33,7 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     domains: {},
     daily: {},
     settings: DEFAULT_SETTINGS,
+    activeState: null,
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -47,7 +50,7 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Listen to browser storage changes across all extension pages
     if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
       const handleStorageChange = (changes: { [key: string]: any }) => {
-        if (changes.website_time_tracker_data) {
+        if (changes.website_time_tracker_data || changes[ACTIVE_STATE_KEY]) {
           refreshData();
         }
       };
@@ -130,6 +133,7 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
         domains: data.domains,
         daily: data.daily,
         settings: data.settings,
+        activeState: data.activeState ?? null,
         isLoading,
         refreshData,
         updateSettings,
