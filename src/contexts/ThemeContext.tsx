@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { browserAPI } from '../utils/browserApi';
 
 type Theme = 'dark' | 'light' | 'system';
 
@@ -9,19 +10,43 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const THEME_STORAGE_KEY = 'wtt_theme_preference';
+
+function readStoredTheme(): Promise<Theme> {
+  return new Promise((resolve) => {
+    if (browserAPI?.storage?.local) {
+      browserAPI.storage.local.get([THEME_STORAGE_KEY], (res) => {
+        resolve((res?.[THEME_STORAGE_KEY] as Theme) || 'dark');
+      });
+      return;
+    }
+
+    const fallbackTheme = window.localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
+    resolve(fallbackTheme || 'dark');
+  });
+}
+
+function persistTheme(theme: Theme): void {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }
+
+  if (browserAPI?.storage?.local) {
+    browserAPI.storage.local.set({ [THEME_STORAGE_KEY]: theme });
+  }
+}
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    return (localStorage.getItem('wtt_theme') as Theme) || 'dark';
-  });
-
+  const [theme, setThemeState] = useState<Theme>('dark');
   const [isDark, setIsDark] = useState<boolean>(true);
 
-  useEffect(() => {
+  const applyTheme = (targetTheme: Theme) => {
+    if (typeof document === 'undefined') return;
+
     const root = document.documentElement;
     const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const activeDark = targetTheme === 'dark' || (targetTheme === 'system' && systemDark);
 
-    const activeDark = theme === 'dark' || (theme === 'system' && systemDark);
     setIsDark(activeDark);
 
     if (activeDark) {
@@ -31,8 +56,40 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       root.classList.remove('dark');
       root.classList.add('light');
     }
+  };
 
-    localStorage.setItem('wtt_theme', theme);
+  useEffect(() => {
+    let cancelled = false;
+
+    const initializeTheme = async () => {
+      const storedTheme = await readStoredTheme();
+      if (cancelled) return;
+      setThemeState(storedTheme);
+      applyTheme(storedTheme);
+    };
+
+    initializeTheme();
+
+    if (browserAPI?.storage?.onChanged) {
+      const handleStorageChange = (changes: { [key: string]: any }) => {
+        const newTheme = changes[THEME_STORAGE_KEY]?.newValue as Theme | undefined;
+        if (newTheme) {
+          setThemeState(newTheme);
+          applyTheme(newTheme);
+        }
+      };
+
+      browserAPI.storage.onChanged.addListener(handleStorageChange);
+      return () => {
+        cancelled = true;
+        browserAPI.storage.onChanged.removeListener(handleStorageChange);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    applyTheme(theme);
+    persistTheme(theme);
   }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
