@@ -13,18 +13,27 @@ import { formatDuration, getFormattedDate } from '../../utils/formatters';
 import { WebsiteDetailModal } from '../WebsiteDetail/WebsiteDetailModal';
 
 export const Dashboard: React.FC = () => {
-  const { domains, daily, settings } = useStorage();
+  const { domains, daily, settings, activeState } = useStorage();
   const [selectedDomain, setSelectedDomain] = useState<DomainStats | null>(null);
 
   const todayStr = getFormattedDate();
   const todayRecord = daily[todayStr] || { date: todayStr, domains: {}, productivityScore: 100, totalTime: 0 };
   const todayDomainMap = todayRecord.domains || {};
 
+  const activeDurationSeconds = activeState?.domain && activeState.startTime
+    ? Math.max(0, Math.floor((Date.now() - activeState.startTime) / 1000))
+    : 0;
+
+  const liveTodayDomainMap = { ...todayDomainMap };
+  if (activeState?.domain) {
+    liveTodayDomainMap[activeState.domain] = (liveTodayDomainMap[activeState.domain] || 0) + activeDurationSeconds;
+  }
+
   // 1. Today's Total Time
-  const todayTotalTime = Object.values(todayDomainMap).reduce((a, b) => a + b, 0);
+  const todayTotalTime = Object.values(liveTodayDomainMap).reduce((a, b) => a + b, 0);
 
   // 2. Today's Productivity Score
-  const score = calculateProductivityScore(todayDomainMap, settings);
+  const score = calculateProductivityScore(liveTodayDomainMap, settings);
 
   // 3. Weekly Time calculation (last 7 days)
   const nowMs = Date.now();
@@ -52,7 +61,7 @@ export const Dashboard: React.FC = () => {
   // 4. Most Used Site Today
   let mostUsedDomain = 'None';
   let maxTimeToday = 0;
-  Object.entries(todayDomainMap).forEach(([domain, sec]) => {
+  Object.entries(liveTodayDomainMap).forEach(([domain, sec]) => {
     if (sec > maxTimeToday) {
       maxTimeToday = sec;
       mostUsedDomain = domain;
@@ -72,7 +81,7 @@ export const Dashboard: React.FC = () => {
   });
 
   // 6. Top 5 Websites Today
-  const topWebsites = Object.entries(todayDomainMap)
+  const topWebsites = Object.entries(liveTodayDomainMap)
     .map(([domain, timeSpent]) => {
       const ds = domains[domain] || {
         domain,
@@ -98,7 +107,7 @@ export const Dashboard: React.FC = () => {
     Other: 0,
   };
 
-  Object.entries(todayDomainMap).forEach(([domain, sec]) => {
+  Object.entries(liveTodayDomainMap).forEach(([domain, sec]) => {
     const cat = getDomainCategory(domain, settings);
     categoryTotals[cat] = (categoryTotals[cat] || 0) + sec;
   });
