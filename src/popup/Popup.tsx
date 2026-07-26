@@ -51,11 +51,16 @@ const PopupContent: React.FC = () => {
   const todayRecord = daily[todayStr] || { domains: {} };
   const todayDomainMap = todayRecord.domains || {};
 
-  const todayTotalTime = Object.values(todayDomainMap).reduce((a, b) => a + b, 0);
-  const todayProductivityScore = calculateProductivityScore(todayDomainMap, settings);
+  const liveTodayDomainMap = { ...todayDomainMap };
+  if (currentSession.isTracking && currentSession.domain) {
+    liveTodayDomainMap[currentSession.domain] = (liveTodayDomainMap[currentSession.domain] || 0) + currentSession.currentSeconds;
+  }
+
+  const todayTotalTime = Object.values(liveTodayDomainMap).reduce((a, b) => a + b, 0);
+  const todayProductivityScore = calculateProductivityScore(liveTodayDomainMap, settings);
 
   // Top 5 websites today
-  const top5Websites = Object.entries(todayDomainMap)
+  const top5Websites = Object.entries(liveTodayDomainMap)
     .map(([dom, sec]) => ({
       domain: dom,
       timeSpent: sec,
