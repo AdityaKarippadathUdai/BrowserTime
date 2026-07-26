@@ -1,39 +1,39 @@
 /**
- * Format total seconds into human readable duration
- * Example: 8280 -> "2h 18m", 3300 -> "55m", 45 -> "45s"
+ * Format total seconds into human readable duration.
+ * Always shows seconds when < 1 minute; otherwise shows h/m/s breakdown.
+ * Examples: 8280 → "2h 18m", 75 → "1m 15s", 45 → "45s"
  */
 export function formatDuration(seconds: number): string {
-  if (!seconds || seconds <= 0) return '0m';
+  if (!seconds || seconds <= 0) return '0s';
 
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
 
   if (hrs > 0) {
-    return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+    return secs > 0 ? `${hrs}h ${mins}m ${secs}s` : mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
   }
   if (mins > 0) {
-    return `${mins}m`;
+    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
   }
   return `${secs}s`;
 }
 
 /**
- * Format total seconds into a detailed string (e.g. 2 hours 18 minutes)
+ * Format total seconds into a detailed string (e.g. 2 hours 18 minutes 5 seconds)
  */
 export function formatDurationDetailed(seconds: number): string {
-  if (!seconds || seconds <= 0) return '0 minutes';
+  if (!seconds || seconds <= 0) return '0 seconds';
 
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
 
   const hrsPart = hrs > 0 ? `${hrs} ${hrs === 1 ? 'hour' : 'hours'}` : '';
   const minsPart = mins > 0 ? `${mins} ${mins === 1 ? 'minute' : 'minutes'}` : '';
+  const secsPart = secs > 0 ? `${secs} ${secs === 1 ? 'second' : 'seconds'}` : '';
 
-  if (hrsPart && minsPart) return `${hrsPart} ${minsPart}`;
-  if (hrsPart) return hrsPart;
-  if (minsPart) return minsPart;
-  return `${Math.floor(seconds)} seconds`;
+  return [hrsPart, minsPart, secsPart].filter(Boolean).join(' ') || '0 seconds';
 }
 
 /**
