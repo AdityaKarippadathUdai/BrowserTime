@@ -1,22 +1,23 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "Website Time Tracker",
   "version": "1.0.0",
   "description": "Track website usage, monitor productivity, analyze daily/weekly browsing habits offline.",
   "permissions": [
     "tabs",
+    "activeTab",
     "storage",
     "alarms",
     "idle",
-    "notifications"
-  ],
-  "host_permissions": [
-    "<all_urls>"
+    "notifications",
+    "http://*/*",
+    "https://*/*"
   ],
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["background.js"],
+    "persistent": false
   },
-  "action": {
+  "browser_action": {
     "default_popup": "src/popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -29,7 +30,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
@@ -42,7 +43,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "website-time-tracker@antigravity.local",
-      "strict_min_version": "109.0"
+      "strict_min_version": "78.0"
     }
   }
 }
