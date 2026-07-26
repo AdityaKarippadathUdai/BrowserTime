@@ -1,17 +1,23 @@
+import { browserAPI } from '../utils/browserApi';
+
 export type IdleState = 'active' | 'idle' | 'locked';
 
 export function setupIdleListener(
   detectionIntervalSeconds: number,
-  onStateChange: (state: IdleState) => void
+  callback: (state: IdleState) => void
 ): void {
-  if (typeof chrome !== 'undefined' && chrome.idle) {
-    try {
-      chrome.idle.setDetectionInterval(detectionIntervalSeconds);
-      chrome.idle.onStateChanged.addListener((newState) => {
-        onStateChange(newState as IdleState);
-      });
-    } catch (e) {
-      console.error('Idle detection setup error:', e);
-    }
+  if (!browserAPI?.idle) return;
+
+  try {
+    browserAPI.idle.setDetectionInterval(detectionIntervalSeconds);
+    browserAPI.idle.onStateChanged.addListener((newState) => {
+      callback(newState as IdleState);
+    });
+    // Fire initial state on SW startup
+    browserAPI.idle.queryState(detectionIntervalSeconds, (state) => {
+      if (state) callback(state as IdleState);
+    });
+  } catch (e) {
+    console.error('Idle setup error:', e);
   }
 }
