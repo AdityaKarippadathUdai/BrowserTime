@@ -3,7 +3,7 @@
   <img src="assets/banner.svg" alt="BrowserTime Banner" width="100%">
 </p>
 
-<p align="center">
+<p>
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
@@ -11,10 +11,6 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 ![Chrome Extension](https://img.shields.io/badge/Chrome_Extension-MV3-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
 ![Firefox](https://img.shields.io/badge/Firefox-Compatible-FF7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)
-
-</p>
-<p align="center">
-
 ![Recharts](https://img.shields.io/badge/Recharts-Analytics-FF6384?style=for-the-badge)
 ![Lucide React](https://img.shields.io/badge/Lucide-Icons-F56565?style=for-the-badge)
 ![Browser Storage](https://img.shields.io/badge/Browser_Storage-Local-00C853?style=for-the-badge)
