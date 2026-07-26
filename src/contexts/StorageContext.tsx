@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS } from '../constants/categories';
 import { CategoryName, DailyRecord, DomainStats, ProductivityType, Settings, StorageState } from '../types';
+import { browserAPI } from '../utils/browserApi';
 import {
   exportDataJSON,
   getStorageData,
@@ -43,16 +44,16 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     refreshData();
 
-    // Listen to chrome storage changes
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
-      const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+    // Listen to browser storage changes across all extension pages
+    if (browserAPI && browserAPI.storage && browserAPI.storage.onChanged) {
+      const handleStorageChange = (changes: { [key: string]: any }) => {
         if (changes.website_time_tracker_data) {
           refreshData();
         }
       };
-      chrome.storage.onChanged.addListener(handleStorageChange);
+      browserAPI.storage.onChanged.addListener(handleStorageChange);
       return () => {
-        chrome.storage.onChanged.removeListener(handleStorageChange);
+        browserAPI.storage.onChanged.removeListener(handleStorageChange);
       };
     }
   }, []);
