@@ -3,13 +3,14 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 
-export default defineConfig({
+// ─── Shared path aliases ───────────────────────────────────────────────────────
+const alias = { '@': resolve(__dirname, 'src') };
+
+// ─── Main extension UI build (popup, dashboard, newtab) ───────────────────────
+// These are HTML entries → bundled as ES modules loaded by the browser normally.
+const uiConfig = defineConfig({
   plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
-    },
-  },
+  resolve: { alias },
   build: {
     outDir: process.env.DIST_DIR || 'dist',
     emptyOutDir: true,
@@ -18,18 +19,13 @@ export default defineConfig({
         popup: resolve(__dirname, 'src/popup/popup.html'),
         dashboard: resolve(__dirname, 'dashboard.html'),
         newtab: resolve(__dirname, 'newtab.html'),
-        background: resolve(__dirname, 'src/background/background.ts'),
-        content: resolve(__dirname, 'src/content/content.ts'),
       },
       output: {
-        entryFileNames: (chunkInfo) => {
-          if (chunkInfo.name === 'background') return 'background.js';
-          if (chunkInfo.name === 'content') return 'content.js';
-          return 'assets/[name]-[hash].js';
-        },
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
   },
 });
+
+export default uiConfig;
