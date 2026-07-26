@@ -1,155 +1,199 @@
+/**
+ * Tracker — persists active browsing state across service-worker restarts.
+ *
+ * The extension uses browser storage as the single source of truth for active
+ * tracking state, while the in-memory flags only reflect transient browser UI
+ * conditions such as focus and idle state.
+ */
+import { browserAPI } from '../utils/browserApi';
 import { extractDomain } from '../utils/formatters';
-import { updateTimeSpent } from './storage';
+import { ActiveState, commitSeconds, loadActiveState, saveActiveState } from './storage';
 
-export class TimeTracker {
-  private activeDomain: string | null = null;
-  private activeTitle: string | null = null;
-  private activeFavicon: string | null = null;
-  private sessionStartTime: number | null = null;
-  private isWindowFocused: boolean = true;
-  private isUserActive: boolean = true;
+let isWindowFocused = true;
+let isUserIdle = false;
 
-  constructor() {
-    this.initListeners();
+function isSupportedUrl(url: string): boolean {
+  if (!url) return false;
+
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
   }
+}
 
-  private initListeners() {
-    if (typeof chrome === 'undefined' || !chrome.tabs) return;
-
-    // Tab Activated
-    chrome.tabs.onActivated.addListener(async (activeInfo) => {
-      try {
-        const tab = await chrome.tabs.get(activeInfo.tabId);
-        this.switchTab(tab);
-      } catch (e) {
-        // Tab might have closed
-      }
-    });
-
-    // Tab Updated (URL or Title change)
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-      if (tab.active) {
-        this.switchTab(tab);
-      }
-    });
-
-    // Window Focus Changed
-    if (chrome.windows) {
-      chrome.windows.onFocusChanged.addListener((windowId) => {
-        if (windowId === chrome.windows.WINDOW_ID_NONE) {
-          this.setWindowFocused(false);
-        } else {
-          this.setWindowFocused(true);
-          this.syncActiveTab();
-        }
-      });
-    }
-  }
-
-  public async syncActiveTab(): Promise<void> {
-    if (typeof chrome === 'undefined' || !chrome.tabs) return;
+function queryActiveTab(): Promise<chrome.tabs.Tab | null> {
+  return new Promise((resolve) => {
     try {
-      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (activeTab) {
-        this.switchTab(activeTab);
-      } else {
-        this.pauseTracking();
+      browserAPI.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (browserAPI.runtime.lastError) {
+          resolve(null);
+          return;
+        }
+
+        if (tabs && tabs.length > 0) {
+          resolve(tabs[0]);
+          return;
+        }
+
+        browserAPI.tabs.query({ active: true, lastFocusedWindow: true }, (fallbackTabs) => {
+          resolve(fallbackTabs && fallbackTabs.length > 0 ? fallbackTabs[0] : null);
+        });
+      });
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function flush(endTracking = false): Promise<void> {
+  const active = await loadActiveState();
+  if (!active) return;
+
+  const now = Date.now();
+  const seconds = Math.floor((now - active.startTime) / 1000);
+
+  if (seconds > 0) {
+    await commitSeconds(active.domain, active.url, active.title, active.favicon, seconds, active.startTime);
+  }
+
+  if (endTracking) {
+    await saveActiveState(null);
+  } else {
+    await saveActiveState({ ...active, startTime: now });
+  }
+}
+
+async function startTracking(domain: string, title: string, favicon: string, url: string): Promise<void> {
+  const current = await loadActiveState();
+
+  if (current) {
+    const now = Date.now();
+    const seconds = Math.floor((now - current.startTime) / 1000);
+    if (seconds > 0) {
+      await commitSeconds(current.domain, current.url, current.title, current.favicon, seconds, current.startTime);
+    }
+  }
+
+  await saveActiveState({ domain, url, title, favicon, startTime: Date.now() });
+}
+
+async function stopTracking(): Promise<void> {
+  await flush(true);
+}
+
+async function processTab(tab: chrome.tabs.Tab | null): Promise<void> {
+  if (isUserIdle || !isWindowFocused) {
+    await stopTracking();
+    return;
+  }
+
+  if (!tab) {
+    await stopTracking();
+    return;
+  }
+
+  const url = tab.url || tab.pendingUrl || '';
+  if (!isSupportedUrl(url)) {
+    await stopTracking();
+    return;
+  }
+
+  const domain = extractDomain(url);
+  if (!domain) {
+    await stopTracking();
+    return;
+  }
+
+  const title = tab.title || domain;
+  const favicon = tab.favIconUrl || '';
+  const active = await loadActiveState();
+
+  if (!active || active.domain !== domain) {
+    await startTracking(domain, title, favicon, url);
+  } else {
+    const nextTitle = title || active.title;
+    const nextFavicon = favicon || active.favicon;
+    if (nextTitle !== active.title || nextFavicon !== active.favicon || url !== active.url) {
+      await saveActiveState({ ...active, url, title: nextTitle, favicon: nextFavicon });
+    }
+  }
+}
+
+export async function syncActiveTab(): Promise<void> {
+  const tab = await queryActiveTab();
+  await processTab(tab);
+}
+
+export async function periodicFlush(): Promise<void> {
+  if (isUserIdle || !isWindowFocused) {
+    await stopTracking();
+    return;
+  }
+  await flush(false);
+}
+
+export async function onWindowFocusChange(focused: boolean): Promise<void> {
+  isWindowFocused = focused;
+  if (!focused) {
+    await stopTracking();
+  } else {
+    await syncActiveTab();
+  }
+}
+
+export async function onIdleChange(state: string): Promise<void> {
+  isUserIdle = state !== 'active';
+  if (isUserIdle) {
+    await stopTracking();
+  } else {
+    await syncActiveTab();
+  }
+}
+
+export async function getCurrentSessionInfo(): Promise<{
+  domain: string | null;
+  title: string | null;
+  favicon: string | null;
+  currentSeconds: number;
+  isTracking: boolean;
+}> {
+  const active = await loadActiveState();
+
+  if (!active || isUserIdle || !isWindowFocused) {
+    return { domain: null, title: null, favicon: null, currentSeconds: 0, isTracking: false };
+  }
+
+  const currentSeconds = Math.floor((Date.now() - active.startTime) / 1000);
+  return {
+    domain: active.domain,
+    title: active.title,
+    favicon: active.favicon,
+    currentSeconds,
+    isTracking: true,
+  };
+}
+
+export function initListeners(): void {
+  browserAPI.tabs.onActivated.addListener((info) => {
+    browserAPI.tabs.get(info.tabId, (tab) => {
+      if (!browserAPI.runtime.lastError && tab) {
+        void processTab(tab);
       }
-    } catch (e) {
-      console.error('Error syncing active tab:', e);
+    });
+  });
+
+  browserAPI.tabs.onUpdated.addListener((_id, change, tab) => {
+    if (tab?.active && (change.url || change.title || change.status === 'complete')) {
+      void processTab(tab);
     }
-  }
+  });
 
-  public setWindowFocused(focused: boolean): void {
-    if (this.isWindowFocused === focused) return;
-    this.isWindowFocused = focused;
-
-    if (!focused) {
-      this.pauseTracking();
-    } else {
-      this.syncActiveTab();
-    }
-  }
-
-  public setUserActive(active: boolean): void {
-    if (this.isUserActive === active) return;
-    this.isUserActive = active;
-
-    if (!active) {
-      this.pauseTracking();
-    } else {
-      this.syncActiveTab();
-    }
-  }
-
-  private switchTab(tab: chrome.tabs.Tab): void {
-    const newDomain = extractDomain(tab.url);
-
-    // If invalid domain (chrome://, about:blank, extension pages) -> pause tracking
-    if (!newDomain) {
-      this.pauseTracking();
-      return;
-    }
-
-    const newTitle = tab.title || newDomain;
-    const newFavicon = tab.favIconUrl || '';
-
-    // If domain changed or we were paused -> flush previous session & start new
-    if (newDomain !== this.activeDomain || !this.sessionStartTime) {
-      this.flushTimeSpent();
-      this.activeDomain = newDomain;
-      this.activeTitle = newTitle;
-      this.activeFavicon = newFavicon;
-      this.sessionStartTime = Date.now();
-    } else {
-      // Same domain, update title/favicon metadata if changed
-      this.activeTitle = newTitle;
-      if (newFavicon) this.activeFavicon = newFavicon;
-    }
-  }
-
-  public flushTimeSpent(): void {
-    if (
-      this.activeDomain &&
-      this.sessionStartTime &&
-      this.isWindowFocused &&
-      this.isUserActive
-    ) {
-      const now = Date.now();
-      const seconds = Math.floor((now - this.sessionStartTime) / 1000);
-      if (seconds > 0) {
-        const domain = this.activeDomain;
-        const title = this.activeTitle || domain;
-        const favicon = this.activeFavicon || undefined;
-        const startTime = this.sessionStartTime;
-
-        updateTimeSpent(domain, title, favicon, seconds, startTime);
-        // Reset start time to now for ongoing tracking
-        this.sessionStartTime = now;
-      }
-    }
-  }
-
-  public pauseTracking(): void {
-    this.flushTimeSpent();
-    this.activeDomain = null;
-    this.activeTitle = null;
-    this.activeFavicon = null;
-    this.sessionStartTime = null;
-  }
-
-  public getCurrentSessionInfo() {
-    let currentSeconds = 0;
-    if (this.activeDomain && this.sessionStartTime && this.isWindowFocused && this.isUserActive) {
-      currentSeconds = Math.floor((Date.now() - this.sessionStartTime) / 1000);
-    }
-    return {
-      domain: this.activeDomain,
-      title: this.activeTitle,
-      favicon: this.activeFavicon,
-      sessionStartTime: this.sessionStartTime,
-      currentSeconds,
-      isTracking: !!(this.activeDomain && this.isWindowFocused && this.isUserActive),
-    };
+  if (browserAPI.windows) {
+    browserAPI.windows.onFocusChanged.addListener(async (windowId) => {
+      const focused = windowId !== browserAPI.windows.WINDOW_ID_NONE;
+      await onWindowFocusChange(focused);
+    });
   }
 }
