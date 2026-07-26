@@ -8,13 +8,23 @@ const rootDir = process.cwd();
 const distDir = path.resolve(rootDir, 'chrome-dist');
 const manifestSrc = path.resolve(rootDir, 'manifests/manifest.chrome.json');
 const manifestDest = path.resolve(distDir, 'manifest.json');
+const env = { ...process.env, DIST_DIR: 'chrome-dist' };
 
 // Run icon generator first
 execSync('npx tsx scripts/generate-icons.ts', { stdio: 'inherit' });
 
-// Run Vite build targeting chrome-dist
-process.env.DIST_DIR = 'chrome-dist';
-execSync('npx vite build', { stdio: 'inherit', env: { ...process.env, DIST_DIR: 'chrome-dist' } });
+// 1. Build UI (popup, dashboard, newtab) — ES modules
+execSync('npx vite build --config vite.config.ts', { stdio: 'inherit', env });
+
+// 2. Build background + content as self-contained IIFE scripts
+execSync('npx vite build --config vite.scripts.config.ts', {
+  stdio: 'inherit',
+  env: { ...env, BUILD_ENTRY: 'background' },
+});
+execSync('npx vite build --config vite.scripts.config.ts', {
+  stdio: 'inherit',
+  env: { ...env, BUILD_ENTRY: 'content' },
+});
 
 // Copy Manifest
 fs.copyFileSync(manifestSrc, manifestDest);
