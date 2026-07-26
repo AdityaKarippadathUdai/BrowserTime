@@ -20,9 +20,14 @@ export interface CategoryInfo {
 
 export interface Session {
   id: string;
+  domain: string;
+  url?: string;
+  title: string;
+  favicon?: string;
   startTime: number;
   endTime: number;
   duration: number; // seconds
+  category: CategoryName;
 }
 
 export interface DomainStats {
