@@ -1,91 +1,108 @@
+import { browserAPI } from '../utils/browserApi';
 import { FLUSH_ALARM, CHECK_NOTIF_ALARM, setupAlarms } from './alarms';
 import { setupIdleListener } from './idle';
 import { loadStorageData } from './storage';
-import { TimeTracker } from './tracker';
+import {
+  getCurrentSessionInfo,
+  initListeners,
+  onIdleChange,
+  periodicFlush,
+  syncActiveTab,
+} from './tracker';
 
-const tracker = new TimeTracker();
+function initializeTracking(): void {
+  setupAlarms();
+  initListeners();
+  setupIdleListener(60, onIdleChange);
+  void syncActiveTab();
+}
 
-// Initialize periodic alarms
-setupAlarms();
+// ─── Boot ─────────────────────────────────────────────────────────────────────
 
-// Setup idle detection (default 60s)
-setupIdleListener(60, (idleState) => {
-  if (idleState === 'active') {
-    tracker.setUserActive(true);
-  } else {
-    tracker.setUserActive(false);
+initializeTracking();
+
+browserAPI.runtime.onInstalled.addListener(() => {
+  initializeTracking();
+});
+
+browserAPI.runtime.onStartup.addListener(() => {
+  initializeTracking();
+});
+
+// ─── Alarm handler ────────────────────────────────────────────────────────────
+
+browserAPI.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === FLUSH_ALARM) {
+    await periodicFlush();
+  } else if (alarm.name === CHECK_NOTIF_ALARM) {
+    await checkNotificationThresholds();
   }
 });
 
-// Alarm Listener
-if (typeof chrome !== 'undefined' && chrome.alarms) {
-  chrome.alarms.onAlarm.addListener(async (alarm) => {
-    if (alarm.name === FLUSH_ALARM) {
-      tracker.flushTimeSpent();
-    } else if (alarm.name === CHECK_NOTIF_ALARM) {
-      checkNotificationThresholds();
-    }
-  });
-}
+// ─── Message handler ──────────────────────────────────────────────────────────
 
-// Runtime Messages (from Popup / Dashboard)
-if (typeof chrome !== 'undefined' && chrome.runtime) {
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message.type === 'GET_CURRENT_SESSION') {
-      sendResponse(tracker.getCurrentSessionInfo());
-      return true;
-    }
+browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'GET_CURRENT_SESSION') {
+    (async () => {
+      await syncActiveTab();
+      const info = await getCurrentSessionInfo();
+      sendResponse(info);
+    })();
+    return true;
+  }
 
-    if (message.type === 'FORCE_FLUSH') {
-      tracker.flushTimeSpent();
+  if (message.type === 'FORCE_FLUSH') {
+    (async () => {
+      await periodicFlush();
       sendResponse({ status: 'ok' });
-      return true;
-    }
+    })();
+    return true;
+  }
 
-    if (message.type === 'OPEN_DASHBOARD') {
-      const dashboardUrl = chrome.runtime.getURL('dashboard.html');
-      chrome.tabs.create({ url: dashboardUrl });
+  if (message.type === 'OPEN_DASHBOARD') {
+    browserAPI.tabs.create({ url: browserAPI.runtime.getURL('dashboard.html') });
+    sendResponse({ status: 'ok' });
+    return true;
+  }
+
+  if (message.type === 'VISIBILITY_CHANGE') {
+    (async () => {
+      if (!message.hidden && sender.tab?.active) {
+        await syncActiveTab();
+      }
       sendResponse({ status: 'ok' });
-      return true;
-    }
-  });
-}
+    })();
+    return true;
+  }
 
-// Notification Check
+  return false;
+});
+
+// ─── Notification check ───────────────────────────────────────────────────────
+
 async function checkNotificationThresholds(): Promise<void> {
   const data = await loadStorageData();
-  const settings = data.settings;
-
-  if (!settings.enableNotifications) return;
+  if (!data.settings.enableNotifications) return;
 
   const todayStr = new Date().toISOString().split('T')[0];
   const todayData = data.daily[todayStr];
-  if (!todayData || !todayData.domains) return;
+  if (!todayData?.domains) return;
 
-  const limitSeconds = settings.notificationThresholdMinutes * 60;
+  const limitSeconds = data.settings.notificationThresholdMinutes * 60;
   if (limitSeconds <= 0) return;
 
-  // Check each domain for time limits
-  Object.entries(todayData.domains).forEach(([domain, seconds]) => {
+  for (const [domain, seconds] of Object.entries(todayData.domains)) {
     if (seconds >= limitSeconds) {
       const hrs = Math.floor(seconds / 3600);
       const mins = Math.floor((seconds % 3600) / 60);
       const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
-
-      if (typeof chrome !== 'undefined' && chrome.notifications) {
-        chrome.notifications.create(`limit_${domain}_${todayStr}`, {
-          type: 'basic',
-          iconUrl: chrome.runtime.getURL('icons/icon48.png'),
-          title: 'Website Usage Limit Reached',
-          message: `You have spent ${timeStr} on ${domain} today.`,
-          priority: 1,
-        });
-      }
+      browserAPI.notifications?.create(`limit_${domain}_${todayStr}`, {
+        type: 'basic',
+        iconUrl: browserAPI.runtime.getURL('icons/icon48.png'),
+        title: 'Website Usage Limit',
+        message: `You've spent ${timeStr} on ${domain} today.`,
+        priority: 1,
+      });
     }
-  });
+  }
 }
-
-// Initial Sync
-tracker.syncActiveTab();
-
-console.log('⚡ Website Time Tracker Service Worker initialized.');
