@@ -48,7 +48,7 @@ function queryActiveTab(): Promise<chrome.tabs.Tab | null> {
   });
 }
 
-async function flush(endTracking = false): Promise<void> {
+async function finalizeSession(): Promise<void> {
   const active = await loadActiveState();
   if (!active) return;
 
@@ -59,11 +59,7 @@ async function flush(endTracking = false): Promise<void> {
     await commitSeconds(active.domain, active.url, active.title, active.favicon, seconds, active.startTime);
   }
 
-  if (endTracking) {
-    await saveActiveState(null);
-  } else {
-    await saveActiveState({ ...active, startTime: now });
-  }
+  await saveActiveState(null);
 }
 
 async function startTracking(domain: string, title: string, favicon: string, url: string): Promise<void> {
@@ -81,7 +77,7 @@ async function startTracking(domain: string, title: string, favicon: string, url
 }
 
 async function stopTracking(): Promise<void> {
-  await flush(true);
+  await finalizeSession();
 }
 
 async function processTab(tab: chrome.tabs.Tab | null): Promise<void> {
@@ -146,7 +142,11 @@ export async function periodicFlush(): Promise<void> {
     await stopTracking();
     return;
   }
-  await flush(false);
+
+  const active = await loadActiveState();
+  if (!active) return;
+
+  await saveActiveState(active);
 }
 
 export async function onWindowFocusChange(focused: boolean): Promise<void> {
