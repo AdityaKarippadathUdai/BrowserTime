@@ -10,7 +10,14 @@ import {
   syncActiveTab,
 } from './tracker';
 
+let initialized = false;
+
 function initializeTracking(): void {
+  if (initialized) {
+    return;
+  }
+
+  initialized = true;
   setupAlarms();
   initListeners();
   setupIdleListener(60, onIdleChange);
@@ -44,7 +51,6 @@ browserAPI.alarms.onAlarm.addListener(async (alarm) => {
 browserAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_CURRENT_SESSION') {
     (async () => {
-      await syncActiveTab();
       const info = await getCurrentSessionInfo();
       sendResponse(info);
     })();
