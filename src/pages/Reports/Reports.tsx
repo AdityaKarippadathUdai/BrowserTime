@@ -146,7 +146,7 @@ export const Reports: React.FC = () => {
         </div>
       </div>
 
-      <ActivityHeatmap range="180d" />
+      <ActivityHeatmap range="6m" />
 
       {/* Productive vs Distracting Ratio & Highlights */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -27,6 +27,8 @@ interface ActivityHeatmapProps {
   compact?: boolean;
 }
 
+type HeatmapRange = NonNullable<ActivityHeatmapProps['range']>;
+
 const rangeOptions = [
   { value: '30d' as const, label: 'Last 30 Days' },
   { value: '90d' as const, label: 'Last 90 Days' },
@@ -34,7 +36,7 @@ const rangeOptions = [
   { value: '1y' as const, label: 'Last Year' },
 ];
 
-const getRangeDays = (range: ActivityHeatmapProps['range']) => {
+const getRangeDays = (range: HeatmapRange | undefined) => {
   switch (range) {
     case '90d': return 90;
     case '6m': return 183;
@@ -171,7 +173,12 @@ export const ActivityHeatmap: React.FC<ActivityHeatmapProps> = React.memo(({ ran
             <select
               id="heatmap-range"
               value={selectedRange}
-              onChange={(e) => setSelectedRange(e.target.value as ActivityHeatmapProps['range'])}
+              onChange={(e) => {
+                const nextRange = e.target.value as HeatmapRange;
+                if (rangeOptions.some((option) => option.value === nextRange)) {
+                  setSelectedRange(nextRange);
+                }
+              }}
               className="appearance-none rounded-xl border px-3 py-2 pr-8 text-sm focus:outline-none"
               style={{ backgroundColor: 'var(--theme-surface)', borderColor: 'var(--theme-border)', color: 'var(--theme-text-secondary)' }}
             >

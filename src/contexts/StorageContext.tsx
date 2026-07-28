@@ -33,7 +33,7 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     domains: {},
     daily: {},
     settings: DEFAULT_SETTINGS,
-    activeState: null,
+    activeState: undefined,
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
