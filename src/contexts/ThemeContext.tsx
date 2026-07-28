@@ -65,37 +65,41 @@ function persistPreset(preset: ThemePresetName): void {
   }
 }
 
-const applyThemeVariables = (presetName: ThemePresetName) => {
+const applyThemeVariables = (presetName: ThemePresetName, activeDark: boolean) => {
   if (typeof document === 'undefined') return;
 
   const preset = themePresets[presetName];
   const root = document.documentElement;
 
-  root.style.setProperty('--theme-background', preset.background);
-  root.style.setProperty('--theme-surface', preset.surface);
-  root.style.setProperty('--theme-surface-strong', preset.surfaceStrong);
-  root.style.setProperty('--theme-border', preset.border);
-  root.style.setProperty('--theme-text-primary', preset.textPrimary);
-  root.style.setProperty('--theme-text-secondary', preset.textSecondary);
-  root.style.setProperty('--theme-text-muted', preset.textMuted);
+  const isLightMode = !activeDark;
+
+  root.style.setProperty('--theme-background', isLightMode ? '#f8fafc' : preset.background);
+  root.style.setProperty('--theme-surface', isLightMode ? 'rgba(255, 255, 255, 0.96)' : preset.surface);
+  root.style.setProperty('--theme-surface-strong', isLightMode ? 'rgba(248, 250, 252, 0.98)' : preset.surfaceStrong);
+  root.style.setProperty('--theme-border', isLightMode ? 'rgba(148, 163, 184, 0.32)' : preset.border);
+  root.style.setProperty('--theme-text-primary', isLightMode ? '#0f172a' : preset.textPrimary);
+  root.style.setProperty('--theme-text-secondary', isLightMode ? '#334155' : preset.textSecondary);
+  root.style.setProperty('--theme-text-muted', isLightMode ? '#64748b' : preset.textMuted);
   root.style.setProperty('--theme-primary', preset.primary);
-  root.style.setProperty('--theme-secondary', preset.secondary);
+  root.style.setProperty('--theme-secondary', isLightMode ? '#0f766e' : preset.secondary);
   root.style.setProperty('--theme-accent', preset.accent);
-  root.style.setProperty('--theme-highlight', preset.highlight);
-  root.style.setProperty('--theme-hover', preset.hover);
-  root.style.setProperty('--theme-shadow', preset.shadow);
-  root.style.setProperty('--theme-pattern', preset.pattern);
+  root.style.setProperty('--theme-highlight', isLightMode ? '#14b8a6' : preset.highlight);
+  root.style.setProperty('--theme-hover', isLightMode ? 'rgba(37, 99, 235, 0.1)' : preset.hover);
+  root.style.setProperty('--theme-shadow', isLightMode ? 'rgba(15, 23, 42, 0.16)' : preset.shadow);
+  root.style.setProperty('--theme-pattern', isLightMode
+    ? 'radial-gradient(circle at top left, rgba(37,99,235,0.1), transparent 32%), radial-gradient(circle at bottom right, rgba(34,211,238,0.08), transparent 40%)'
+    : preset.pattern);
   root.style.setProperty('--theme-chart-1', preset.chartPalette[0]);
   root.style.setProperty('--theme-chart-2', preset.chartPalette[1] || preset.primary);
   root.style.setProperty('--theme-chart-3', preset.chartPalette[2] || preset.accent);
   root.style.setProperty('--theme-chart-4', preset.chartPalette[3] || preset.highlight);
   root.style.setProperty('--theme-chart-5', preset.chartPalette[4] || preset.secondary);
-  root.style.setProperty('--theme-heatmap-0', 'rgba(148, 163, 184, 0.18)');
-  root.style.setProperty('--theme-heatmap-1', `${preset.primary}33`);
-  root.style.setProperty('--theme-heatmap-2', `${preset.primary}5d`);
-  root.style.setProperty('--theme-heatmap-3', `${preset.primary}8f`);
-  root.style.setProperty('--theme-heatmap-4', preset.primary);
-  root.style.setProperty('--theme-transition', '200ms ease');
+  root.style.setProperty('--theme-heatmap-0', isLightMode ? 'rgba(148, 163, 184, 0.22)' : 'rgba(148, 163, 184, 0.18)');
+  root.style.setProperty('--theme-heatmap-1', isLightMode ? 'rgba(59, 130, 246, 0.26)' : `${preset.primary}33`);
+  root.style.setProperty('--theme-heatmap-2', isLightMode ? 'rgba(59, 130, 246, 0.4)' : `${preset.primary}5d`);
+  root.style.setProperty('--theme-heatmap-3', isLightMode ? 'rgba(37, 99, 235, 0.62)' : `${preset.primary}8f`);
+  root.style.setProperty('--theme-heatmap-4', isLightMode ? 'rgba(29, 78, 216, 0.82)' : preset.primary);
+  root.style.setProperty('--theme-transition', '220ms ease');
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -111,15 +115,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const activeDark = targetTheme === 'dark' || (targetTheme === 'system' && systemDark);
 
     setIsDark(activeDark);
-    applyThemeVariables(targetPreset);
+    applyThemeVariables(targetPreset, activeDark);
 
-    if (activeDark) {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else {
-      root.classList.remove('dark');
-      root.classList.add('light');
-    }
+    root.classList.toggle('dark', activeDark);
+    root.classList.toggle('light', !activeDark);
   };
 
   useEffect(() => {
@@ -159,21 +158,33 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   useEffect(() => {
-    applyTheme(theme, preset);
-    persistTheme(theme);
-  }, [theme]);
+    if (typeof window === 'undefined') return;
+
+    if (theme !== 'system') return;
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = () => applyTheme(theme, preset);
+
+    mediaQuery.addEventListener?.('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener?.('change', handleSystemThemeChange);
+  }, [theme, preset]);
 
   useEffect(() => {
     applyTheme(theme, preset);
+    persistTheme(theme);
     persistPreset(preset);
-  }, [preset]);
+  }, [theme, preset]);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
+    persistTheme(newTheme);
+    applyTheme(newTheme, preset);
   };
 
   const setPreset = (newPreset: ThemePresetName) => {
     setPresetState(newPreset);
+    persistPreset(newPreset);
+    applyTheme(theme, newPreset);
   };
 
   const activePreset = useMemo(() => themePresets[preset], [preset]);
