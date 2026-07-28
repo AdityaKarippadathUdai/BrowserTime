@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
   Bell,
+  Check,
   Download,
   Moon,
   Plus,
@@ -16,9 +17,10 @@ import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { useStorage } from '../../contexts/StorageContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { presetOptions } from '../../styles/themes';
 
 export const Settings: React.FC = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, preset, setPreset, activePreset } = useTheme();
   const {
     settings,
     updateSettings,
@@ -168,6 +170,53 @@ export const Settings: React.FC = () => {
               <span>{t} Mode</span>
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="glass-panel p-6 space-y-4">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+          <Sun className="w-4 h-4 text-cyan-400" /> Theme Presets
+        </h3>
+        <p className="text-xs text-slate-400">Choose a polished visual palette that updates the full extension instantly.</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {presetOptions.map((option) => {
+            const isSelected = preset === option.value;
+            const swatches = option.preview;
+
+            return (
+              <button
+                key={option.value}
+                onClick={() => setPreset(option.value)}
+                className={`group rounded-2xl border p-3 text-left transition-all duration-300 ${
+                  isSelected
+                    ? 'border-[color:var(--theme-primary)] shadow-lg shadow-[color:var(--theme-shadow)]'
+                    : 'border-[color:var(--theme-border)] hover:border-[color:var(--theme-accent)] hover:-translate-y-0.5'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-100">{option.label}</span>
+                  {isSelected ? <Check className="w-4 h-4 text-cyan-400" /> : null}
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  {swatches.map((swatch, index) => (
+                    <span
+                      key={`${option.value}-${index}`}
+                      className="h-3.5 w-3.5 rounded-full border border-white/10"
+                      style={{ backgroundColor: swatch }}
+                    />
+                  ))}
+                </div>
+                <div className="mt-3 text-[11px] text-slate-400">
+                  {option.value === 'glassmorphic-blue' ? 'Default premium dashboard' : 'Instant visual refresh'}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="rounded-2xl border border-[color:var(--theme-border)] bg-[color:var(--theme-hover)]/50 p-3 text-xs text-slate-400">
+          Current preset: <span className="font-semibold text-slate-200">{activePreset.name}</span>
         </div>
       </div>
 
