@@ -20,7 +20,7 @@ const THEME_PRESET_STORAGE_KEY = 'wtt_theme_preset';
 function readStoredTheme(): Promise<Theme> {
   return new Promise((resolve) => {
     if (browserAPI?.storage?.local) {
-      browserAPI.storage.local.get([THEME_STORAGE_KEY], (res: any) => {
+      browserAPI.storage.local.get([THEME_STORAGE_KEY], (res: Record<string, unknown>) => {
         resolve((res?.[THEME_STORAGE_KEY] as Theme) || 'dark');
       });
       return;
@@ -34,7 +34,7 @@ function readStoredTheme(): Promise<Theme> {
 function readStoredPreset(): Promise<ThemePresetName> {
   return new Promise((resolve) => {
     if (browserAPI?.storage?.local) {
-      browserAPI.storage.local.get([THEME_PRESET_STORAGE_KEY], (res: any) => {
+      browserAPI.storage.local.get([THEME_PRESET_STORAGE_KEY], (res: Record<string, unknown>) => {
         resolve((res?.[THEME_PRESET_STORAGE_KEY] as ThemePresetName) || 'glassmorphic-blue');
       });
       return;
