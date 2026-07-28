@@ -122,7 +122,7 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl pb-12">
+    <div className="w-full space-y-6 pb-12">
       <div>
         <h2 className="text-xl font-bold text-slate-100">Extension Settings</h2>
         <p className="text-xs text-slate-400">Configure appearance, notifications, rules, and data backups</p>
@@ -149,7 +149,7 @@ export const Settings: React.FC = () => {
           <Sun className="w-4 h-4 text-amber-400" /> Appearance & Theme
         </h3>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {(['dark', 'light', 'system'] as const).map((t) => (
             <button
               key={t}
