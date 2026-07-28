@@ -21,6 +21,11 @@
     --theme-chart-3: #60A5FA;
     --theme-chart-4: #38BDF8;
     --theme-chart-5: #818CF8;
+    --theme-heatmap-0: rgba(148, 163, 184, 0.18);
+    --theme-heatmap-1: rgba(37, 99, 235, 0.24);
+    --theme-heatmap-2: rgba(37, 99, 235, 0.42);
+    --theme-heatmap-3: rgba(37, 99, 235, 0.64);
+    --theme-heatmap-4: rgba(37, 99, 235, 0.84);
     --theme-transition: 200ms ease;
   }
 
@@ -38,6 +43,11 @@
     --theme-highlight: #14b8a6;
     --theme-hover: rgba(37, 99, 235, 0.1);
     --theme-shadow: rgba(15, 23, 42, 0.16);
+    --theme-heatmap-0: rgba(148, 163, 184, 0.22);
+    --theme-heatmap-1: rgba(59, 130, 246, 0.26);
+    --theme-heatmap-2: rgba(59, 130, 246, 0.4);
+    --theme-heatmap-3: rgba(37, 99, 235, 0.62);
+    --theme-heatmap-4: rgba(29, 78, 216, 0.82);
   }
 }
 
