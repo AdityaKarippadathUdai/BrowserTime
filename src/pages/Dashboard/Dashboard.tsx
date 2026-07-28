@@ -6,6 +6,7 @@ import { StatCard } from '../../components/cards/StatCard';
 import { CategoryPieChart } from '../../components/charts/CategoryPieChart';
 import { UsageBarChart } from '../../components/charts/UsageBarChart';
 import { WeeklyTrendChart } from '../../components/charts/WeeklyTrendChart';
+import { ActivityHeatmap } from '../../components/charts/ActivityHeatmap';
 import { useStorage } from '../../contexts/StorageContext';
 import { CategoryName, DomainStats } from '../../types';
 import { calculateProductivityScore, getDomainCategory } from '../../utils/categorization';
@@ -198,6 +199,8 @@ export const Dashboard: React.FC = () => {
           <CategoryPieChart data={categoryPieData} />
         </div>
       </div>
+
+      <ActivityHeatmap range="90d" />
 
       {/* Weekly Trend & Usage Bar */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
