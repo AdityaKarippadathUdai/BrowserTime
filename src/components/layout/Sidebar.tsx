@@ -27,24 +27,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200"
+              style={
                 isActive
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25 border border-indigo-500/40'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
+                  ? {
+                      backgroundColor: 'var(--theme-primary)',
+                      color: '#ffffff',
+                      boxShadow: '0 12px 30px -16px var(--theme-shadow)',
+                      border: '1px solid rgba(255,255,255,0.16)',
+                    }
+                  : {
+                      color: 'var(--theme-text-muted)',
+                      backgroundColor: 'transparent',
+                    }
+              }
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+              <Icon className="w-4 h-4" style={{ color: isActive ? '#ffffff' : 'var(--theme-text-muted)' }} />
               <span>{item.label}</span>
             </button>
           );
         })}
       </div>
 
-      <div className="glass-panel p-4 border border-indigo-500/20 bg-indigo-950/20 text-xs text-slate-400 space-y-2">
-        <div className="flex items-center gap-2 text-indigo-400 font-semibold">
+      <div className="glass-panel p-4 text-xs space-y-2" style={{ borderColor: 'var(--theme-border)', backgroundColor: 'var(--theme-hover)' }}>
+        <div className="flex items-center gap-2 font-semibold" style={{ color: 'var(--theme-accent)' }}>
           <Clock className="w-4 h-4" /> Pro Tip
         </div>
-        <p className="leading-relaxed">
+        <p className="leading-relaxed" style={{ color: 'var(--theme-text-muted)' }}>
           Productivity scores automatically recalculate based on category weightings and custom domain rules.
         </p>
       </div>

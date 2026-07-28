@@ -85,7 +85,7 @@ const PopupContent: React.FC = () => {
   };
 
   return (
-    <div className="w-[360px] min-h-[480px] bg-slate-950 text-slate-100 p-4 font-sans flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+    <div className="w-[360px] min-h-[480px] bg-[var(--theme-background)] text-[var(--theme-text-primary)] p-4 font-sans flex flex-col justify-between selection:bg-[color:var(--theme-primary)] selection:text-white">
       {/* Top Header */}
       <div className="space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
