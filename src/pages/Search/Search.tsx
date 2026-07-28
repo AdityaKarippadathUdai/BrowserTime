@@ -88,7 +88,7 @@ export const Search: React.FC = () => {
   }, [domains, daily, searchQuery, timeFilter, categoryFilter, settings]);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="w-full space-y-6 pb-12">
       <div>
         <h2 className="text-xl font-bold text-slate-100">History & Search</h2>
         <p className="text-xs text-slate-400">Search and filter your website usage data</p>
