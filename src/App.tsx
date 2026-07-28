@@ -13,7 +13,7 @@ const DashboardAppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[var(--theme-background)] text-[var(--theme-text-primary)] flex flex-col font-sans selection:bg-[color:var(--theme-primary)] selection:text-white">
       <Navbar />
       <div className="flex-1 flex min-h-[calc(100vh-65px)]">
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
