@@ -11,12 +11,32 @@ export const Badge: React.FC<BadgeProps> = ({
   variant = 'default',
   size = 'md',
 }) => {
-  const styles = {
-    default: 'bg-slate-800 text-slate-300 border-slate-700',
-    success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    danger: 'bg-red-500/10 text-red-400 border-red-500/20',
-    info: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+  const styles: Record<NonNullable<BadgeProps['variant']>, React.CSSProperties> = {
+    default: {
+      backgroundColor: 'var(--theme-surface)',
+      color: 'var(--theme-text-secondary)',
+      borderColor: 'var(--theme-border)',
+    },
+    success: {
+      backgroundColor: 'rgba(34, 197, 94, 0.12)',
+      color: '#4ade80',
+      borderColor: 'rgba(74, 222, 128, 0.24)',
+    },
+    warning: {
+      backgroundColor: 'rgba(245, 158, 11, 0.12)',
+      color: '#fbbf24',
+      borderColor: 'rgba(251, 191, 36, 0.24)',
+    },
+    danger: {
+      backgroundColor: 'rgba(239, 68, 68, 0.12)',
+      color: '#f87171',
+      borderColor: 'rgba(248, 113, 113, 0.24)',
+    },
+    info: {
+      backgroundColor: 'var(--theme-hover)',
+      color: 'var(--theme-accent)',
+      borderColor: 'var(--theme-border)',
+    },
   };
 
   const sizes = {
@@ -26,7 +46,8 @@ export const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center font-medium rounded-full border ${styles[variant]} ${sizes[size]}`}
+      className={`inline-flex items-center font-medium rounded-full border ${sizes[size]}`}
+      style={styles[variant]}
     >
       {children}
     </span>
