@@ -15,9 +15,9 @@ const DashboardAppContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-[var(--theme-background)] text-[var(--theme-text-primary)] flex flex-col font-sans selection:bg-[color:var(--theme-primary)] selection:text-white">
       <Navbar />
-      <div className="flex-1 flex min-h-[calc(100vh-65px)]">
+      <div className="flex-1 flex min-h-[calc(100vh-65px)] overflow-hidden">
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <main className="flex-1 p-6 md:p-8 max-w-7xl overflow-x-hidden">
+        <main className="flex-1 min-w-0 w-full p-6 md:p-8 overflow-x-hidden">
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'reports' && <Reports />}
           {activeTab === 'history' && <Search />}
