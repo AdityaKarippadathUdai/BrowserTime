@@ -5,3 +5,5 @@ chrome-dist
 chrome-extension.zip
 firefox-extension.zip
 website-time-tracker.xpi
+chrome-dist.crx
+chrome-dist.pem
