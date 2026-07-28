@@ -90,6 +90,11 @@ const applyThemeVariables = (presetName: ThemePresetName) => {
   root.style.setProperty('--theme-chart-3', preset.chartPalette[2] || preset.accent);
   root.style.setProperty('--theme-chart-4', preset.chartPalette[3] || preset.highlight);
   root.style.setProperty('--theme-chart-5', preset.chartPalette[4] || preset.secondary);
+  root.style.setProperty('--theme-heatmap-0', 'rgba(148, 163, 184, 0.18)');
+  root.style.setProperty('--theme-heatmap-1', `${preset.primary}33`);
+  root.style.setProperty('--theme-heatmap-2', `${preset.primary}5d`);
+  root.style.setProperty('--theme-heatmap-3', `${preset.primary}8f`);
+  root.style.setProperty('--theme-heatmap-4', preset.primary);
   root.style.setProperty('--theme-transition', '200ms ease');
 };
 
