@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Award, BarChart2, Calendar, CheckCircle2, Clock, ShieldAlert, Zap } from 'lucide-react';
 import { DomainCard } from '../../components/cards/DomainCard';
 import { UsageBarChart } from '../../components/charts/UsageBarChart';
+import { ActivityHeatmap } from '../../components/charts/ActivityHeatmap';
 import { useStorage } from '../../contexts/StorageContext';
 import { DomainStats } from '../../types';
 import {
@@ -144,6 +145,8 @@ export const Reports: React.FC = () => {
           <div className="text-xs text-slate-400">{formatPercentage(distractingPct)} of total time</div>
         </div>
       </div>
+
+      <ActivityHeatmap range="180d" />
 
       {/* Productive vs Distracting Ratio & Highlights */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
