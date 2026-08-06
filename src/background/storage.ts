@@ -37,6 +37,10 @@ export interface ActiveState {
   title: string;
   favicon: string;
   startTime: number; // ms timestamp when this segment started
+  lastUpdated: number; // ms timestamp for the latest valid activity heartbeat
+  sessionId: string;
+  tabId?: number;
+  windowId?: number;
   category?: CategoryName;
 }
 
