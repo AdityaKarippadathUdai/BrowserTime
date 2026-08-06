@@ -7,6 +7,7 @@ import {
   initListeners,
   onIdleChange,
   periodicFlush,
+  restoreTrackingSession,
   syncActiveTab,
 } from './tracker';
 
@@ -30,10 +31,16 @@ initializeTracking();
 
 browserAPI.runtime.onInstalled.addListener(() => {
   initializeTracking();
+  void restoreTrackingSession();
 });
 
 browserAPI.runtime.onStartup.addListener(() => {
   initializeTracking();
+  void restoreTrackingSession();
+});
+
+browserAPI.runtime.onSuspend.addListener(() => {
+  void periodicFlush();
 });
 
 // ─── Alarm handler ────────────────────────────────────────────────────────────
