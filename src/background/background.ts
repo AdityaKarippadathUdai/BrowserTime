@@ -39,9 +39,11 @@ browserAPI.runtime.onStartup.addListener(() => {
   void restoreTrackingSession();
 });
 
-browserAPI.runtime.onSuspend.addListener(() => {
-  void periodicFlush();
-});
+if (browserAPI.runtime?.onSuspend) {
+  browserAPI.runtime.onSuspend.addListener(() => {
+    void periodicFlush();
+  });
+}
 
 // ─── Alarm handler ────────────────────────────────────────────────────────────
 
