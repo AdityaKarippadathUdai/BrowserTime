@@ -13,6 +13,21 @@ let isWindowFocused = true;
 let isUserIdle = false;
 let initializedFromStorage = false;
 
+function buildSessionState(domain: string, title: string, favicon: string, url: string, tab?: chrome.tabs.Tab | null): ActiveState {
+  const now = Date.now();
+  return {
+    domain,
+    url,
+    title,
+    favicon,
+    startTime: now,
+    lastUpdated: now,
+    sessionId: `${now}-${Math.random().toString(36).slice(2, 8)}`,
+    tabId: tab?.id,
+    windowId: tab?.windowId,
+  };
+}
+
 function isSupportedUrl(url: string): boolean {
   if (!url) return false;
 
@@ -48,12 +63,12 @@ function queryActiveTab(): Promise<chrome.tabs.Tab | null> {
   });
 }
 
-async function finalizeSession(): Promise<void> {
+async function finalizeSession(finalizeAt: number = Date.now()): Promise<void> {
   const active = await loadActiveState();
   if (!active) return;
 
-  const now = Date.now();
-  const seconds = Math.floor((now - active.startTime) / 1000);
+  const safeFinalizeAt = Math.max(active.startTime, Math.min(finalizeAt, Date.now()));
+  const seconds = Math.max(0, Math.floor((safeFinalizeAt - active.startTime) / 1000));
 
   if (seconds > 0) {
     await commitSeconds(active.domain, active.url, active.title, active.favicon, seconds, active.startTime);
@@ -62,22 +77,23 @@ async function finalizeSession(): Promise<void> {
   await saveActiveState(null);
 }
 
-async function startTracking(domain: string, title: string, favicon: string, url: string): Promise<void> {
+async function startTracking(domain: string, title: string, favicon: string, url: string, tab?: chrome.tabs.Tab | null): Promise<void> {
   const current = await loadActiveState();
+  const now = Date.now();
 
   if (current) {
-    const now = Date.now();
-    const seconds = Math.floor((now - current.startTime) / 1000);
+    const seconds = Math.max(0, Math.floor((now - current.startTime) / 1000));
     if (seconds > 0) {
       await commitSeconds(current.domain, current.url, current.title, current.favicon, seconds, current.startTime);
     }
+    await saveActiveState(null);
   }
 
-  await saveActiveState({ domain, url, title, favicon, startTime: Date.now() });
+  await saveActiveState(buildSessionState(domain, title, favicon, url, tab));
 }
 
-async function stopTracking(): Promise<void> {
-  await finalizeSession();
+async function stopTracking(finalizeAt: number = Date.now()): Promise<void> {
+  await finalizeSession(finalizeAt);
 }
 
 async function processTab(tab: chrome.tabs.Tab | null): Promise<void> {
@@ -108,12 +124,25 @@ async function processTab(tab: chrome.tabs.Tab | null): Promise<void> {
   const active = await loadActiveState();
 
   if (!active || active.domain !== domain) {
-    await startTracking(domain, title, favicon, url);
+    await startTracking(domain, title, favicon, url, tab);
   } else {
     const nextTitle = title || active.title;
     const nextFavicon = favicon || active.favicon;
-    if (nextTitle !== active.title || nextFavicon !== active.favicon || url !== active.url) {
-      await saveActiveState({ ...active, url, title: nextTitle, favicon: nextFavicon });
+    const now = Date.now();
+    const nextState: ActiveState = {
+      ...active,
+      url,
+      title: nextTitle,
+      favicon: nextFavicon,
+      lastUpdated: now,
+      tabId: tab?.id,
+      windowId: tab?.windowId,
+    };
+
+    if (nextTitle !== active.title || nextFavicon !== active.favicon || url !== active.url || tab?.id !== active.tabId || tab?.windowId !== active.windowId) {
+      await saveActiveState(nextState);
+    } else {
+      await saveActiveState({ ...active, lastUpdated: now, tabId: tab?.id, windowId: tab?.windowId });
     }
   }
 }
@@ -137,6 +166,17 @@ export async function syncActiveTab(): Promise<void> {
   await processTab(tab);
 }
 
+export async function restoreTrackingSession(): Promise<void> {
+  const active = await loadActiveState();
+  if (!active) {
+    return;
+  }
+
+  const finalizeAt = active.lastUpdated ?? active.startTime ?? Date.now();
+  await finalizeSession(finalizeAt);
+  await syncActiveTab();
+}
+
 export async function periodicFlush(): Promise<void> {
   if (isUserIdle || !isWindowFocused) {
     await stopTracking();
@@ -146,7 +186,7 @@ export async function periodicFlush(): Promise<void> {
   const active = await loadActiveState();
   if (!active) return;
 
-  await saveActiveState(active);
+  await saveActiveState({ ...active, lastUpdated: Date.now() });
 }
 
 export async function onWindowFocusChange(focused: boolean): Promise<void> {
@@ -205,10 +245,22 @@ export function initListeners(): void {
     }
   });
 
+  browserAPI.tabs.onRemoved.addListener((_tabId, removeInfo) => {
+    if (removeInfo.isWindowClosing) {
+      void stopTracking();
+    } else {
+      void syncActiveTab();
+    }
+  });
+
   if (browserAPI.windows) {
     browserAPI.windows.onFocusChanged.addListener(async (windowId) => {
       const focused = windowId !== browserAPI.windows.WINDOW_ID_NONE;
       await onWindowFocusChange(focused);
+    });
+
+    browserAPI.windows.onRemoved.addListener(async (_windowId) => {
+      await stopTracking();
     });
   }
 }
