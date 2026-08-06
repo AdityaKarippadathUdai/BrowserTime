@@ -29,4 +29,12 @@ execSync('npx vite build --config vite.scripts.config.ts', {
 // Copy Manifest
 fs.copyFileSync(manifestSrc, manifestDest);
 
+const requiredFiles = ['manifest.json', 'background.js', 'content.js'];
+for (const relPath of requiredFiles) {
+  const fullPath = path.resolve(distDir, relPath);
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`Expected build artifact missing: ${relPath}`);
+  }
+}
+
 console.log('✅ Firefox build completed successfully at firefox-dist/');
